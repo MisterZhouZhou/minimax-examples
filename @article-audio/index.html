@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐进式Web应用（PWA）总结</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            50: '#F5F7FA',
+                            100: '#E4E7EB',
+                            200: '#CBD2D9',
+                            300: '#9AA5B1',
+                            400: '#7B8794',
+                            500: '#616E7C',
+                            600: '#52606D',
+                            700: '#3E4C59',
+                            800: '#323F4B',
+                            900: '#1F2933',
+                        },
+                        gradient: {
+                            start: '#a1c4fd',
+                            end: '#c2e9fb',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+        .content-card {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+        .content-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* 动画效果 */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .fade-in.appear {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .delay-100 { transition-delay: 0.1s; }
+        .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; }
+        .delay-400 { transition-delay: 0.4s; }
+        .delay-500 { transition-delay: 0.5s; }
+        
+        /* 滚动进度条 */
+        .progress-container {
+            position: fixed;
+            top: 0;
+            z-index: 50;
+            width: 100%;
+            height: 4px;
+            background: transparent;
+        }
+        .progress-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #a1c4fd, #c2e9fb);
+            width: 0%;
+        }
+
+        /* 高亮效果 */
+        @keyframes highlight {
+            0% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+            100% { box-shadow: 0 0 0 rgba(59, 130, 246, 0); }
+        }
+        
+        .highlight-section .content-card {
+            animation: highlight 2s ease-in-out;
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50 text-apple-800">
+    <!-- 滚动进度条 -->
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    
+    <!-- 头部区域 -->
+    <header class="gradient-bg py-24 md:py-32 px-6 relative overflow-hidden">
+        <div class="max-w-4xl mx-auto relative z-10">
+            <h1 class="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight fade-in">渐进式Web应用（PWA）</h1>
+            <p class="text-xl md:text-2xl text-white/90 max-w-2xl font-light leading-relaxed fade-in delay-200">
+                结合Web平台技术与原生应用体验的现代应用开发方案
+            </p>
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-purple-500/20 mix-blend-overlay"></div>
+    </header>
+
+    <!-- 目录导航 -->
+    <div class="sticky top-0 z-20 bg-white/80 backdrop-blur-sm border-b border-gray-100 py-3 px-6 shadow-sm">
+        <nav class="max-w-4xl mx-auto overflow-x-auto whitespace-nowrap">
+            <ul class="flex space-x-6 text-apple-600 text-sm font-medium">
+                <li><a href="#intro" class="hover:text-blue-500 transition-colors">介绍</a></li>
+                <li><a href="#platform-apps" class="hover:text-blue-500 transition-colors">平台特定应用</a></li>
+                <li><a href="#websites" class="hover:text-blue-500 transition-colors">传统网站</a></li>
+                <li><a href="#pwa-features" class="hover:text-blue-500 transition-colors">PWA特点</a></li>
+                <li><a href="#pwa-browser" class="hover:text-blue-500 transition-colors">PWA与浏览器</a></li>
+                <li><a href="#tech-features" class="hover:text-blue-500 transition-colors">技术特性</a></li>
+                <li><a href="#spa" class="hover:text-blue-500 transition-colors">单页应用</a></li>
+                <li><a href="#progressive" class="hover:text-blue-500 transition-colors">渐进增强</a></li>
+                <li><a href="#audio" class="hover:text-blue-500 transition-colors">音频总结</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- 主要内容区域 -->
+    <main class="max-w-4xl mx-auto px-6 py-12 md:py-20">
+        <!-- 介绍部分 -->
+        <section id="intro" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">什么是渐进式Web应用？</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_什么是渐进式Web应_20250506_182746.mp3" data-target="#platform-apps">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    渐进式Web应用（PWA）是使用Web平台技术构建的应用，同时提供类似于平台特定应用的用户体验。PWA结合了传统网站和平台特定应用的最佳特性，既保留了Web的跨平台优势，又具备了原生应用的用户体验和功能特性。
+                </p>
+                <audio id="audio-intro" class="hidden">
+                    <source src="t2a_什么是渐进式Web应_20250506_182746.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- 平台特定应用的特点 -->
+        <section id="platform-apps" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">平台特定应用的特点</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_平台特定应用的特点_20250506_182757.mp3" data-target="#websites">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    平台特定应用是为特定操作系统或设备类别开发的应用程序，通常使用平台供应商提供的SDK构建，并通过应用商店分发。
+                </p>
+                <ul class="space-y-4 mb-6">
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">用户易于访问</strong>：在设备上拥有独立图标，使用户容易找到并打开应用</span>
+                    </li>
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">离线和后台操作</strong>：能够在用户未交互时和设备离线状态下运行</span>
+                    </li>
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">专用UI</strong>：可以实现独特、沉浸式的用户界面</span>
+                    </li>
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">操作系统集成</strong>：可与主机操作系统深度集成，如注册为分享目标，访问设备特性（相机、GPS、加速度计等）</span>
+                    </li>
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">应用商店集成</strong>：通过应用商店分发，为用户提供统一的发现和安装渠道</span>
+                    </li>
+                </ul>
+                <audio id="audio-platform-apps" class="hidden">
+                    <source src="t2a_平台特定应用的特点_20250506_182757.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- 传统网站的特点 -->
+        <section id="websites" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">传统网站的特点</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_传统网站的特点_20250506_182805.mp3" data-target="#pwa-features">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    传统网站更像是"用户访问的地方"，而非"用户拥有的东西"。传统网站通常：
+                </p>
+                <ul class="space-y-4 mb-6 text-apple-700">
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>在用户不访问时，在设备上没有存在感</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>只能通过浏览器导航访问</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>高度依赖网络连接</span>
+                    </li>
+                </ul>
+
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    然而，网站相比平台特定应用也有一些优势：
+                </p>
+                <ul class="space-y-4 mb-6">
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">单一代码库</strong>：由于Web本身是跨平台的，网站可以从一个代码库在不同操作系统和设备上运行</span>
+                    </li>
+                    <li class="flex">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span><strong class="text-apple-900 font-medium">通过Web分发</strong>：网站被搜索引擎索引，可通过URL分享和访问，不需要注册应用商店</span>
+                    </li>
+                </ul>
+                <audio id="audio-websites" class="hidden">
+                    <source src="t2a_传统网站的特点_20250506_182805.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- PWA的特点 -->
+        <section id="pwa-features" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">渐进式Web应用的特点</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_渐进式Web应用的特_20250506_182816.mp3" data-target="#pwa-browser">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    PWA结合了传统网站和平台特定应用的优势：
+                </p>
+                
+                <h3 class="text-xl font-medium text-apple-900 mb-4">网站的优势</h3>
+                <ul class="space-y-4 mb-8 text-apple-700">
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>使用标准Web平台技术开发，可从单一代码库在多平台运行</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>可直接通过Web访问</span>
+                    </li>
+                </ul>
+
+                <h3 class="text-xl font-medium text-apple-900 mb-4">平台特定应用的优势</h3>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
+                        <h4 class="font-medium text-apple-900 mb-3">可安装在设备上</h4>
+                        <ul class="space-y-3 text-apple-700">
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>可从平台应用商店或直接从Web安装</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>可自定义安装过程</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>安装后在设备上拥有应用图标</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>可作为独立应用启动，而非浏览器中的网站</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl">
+                        <h4 class="font-medium text-apple-900 mb-3">可在后台与离线运行</h4>
+                        <ul class="space-y-3 text-apple-700">
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>在设备没有网络连接时工作</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>在后台更新内容</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>响应服务器推送消息</span>
+                            </li>
+                            <li class="flex items-start text-sm">
+                                <span class="text-blue-500 mr-2">•</span>
+                                <span>使用操作系统通知系统显示通知</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <ul class="space-y-4 mt-8 text-apple-700">
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>可使用整个屏幕，而非在浏览器UI中运行</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>可与设备集成，注册为共享目标和来源，访问设备特性</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>可通过应用商店和Web发布</span>
+                    </li>
+                </ul>
+                <audio id="audio-pwa-features" class="hidden">
+                    <source src="t2a_渐进式Web应用的特_20250506_182816.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- PWA与浏览器的关系 -->
+        <section id="pwa-browser" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">PWA与浏览器的关系</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_PWA与浏览器的关系_20250506_182827.mp3" data-target="#tech-features">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    在浏览器中访问网站时，网站明显是"运行在浏览器中"，浏览器UI为网站提供可见框架。而PWA通常看起来像平台特定应用，它们通常不显示浏览器UI，但从技术上讲，它们仍然是网站。
+                </p>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    PWA需要浏览器引擎（如Chrome或Firefox中的引擎）来管理和运行。对于平台特定应用，平台操作系统管理应用提供运行环境；对于PWA，浏览器引擎在后台执行这一角色。
+                </p>
+                <p class="text-lg text-apple-700 leading-relaxed">
+                    在某些系统（如Chromebook）上，"浏览器"和"操作系统"之间可能没有明显区别。
+                </p>
+                <audio id="audio-pwa-browser" class="hidden">
+                    <source src="t2a_PWA与浏览器的关系_20250506_182827.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- PWA的技术特性 -->
+        <section id="tech-features" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">PWA的技术特性</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_PWA的技术特性_20250506_182837.mp3" data-target="#spa">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-8">
+                    PWA作为网站，具有与其他网站相同的基本特性：至少有一个HTML页面，通常加载CSS和JavaScript。除此之外，PWA还具有一些额外的技术特性：
+                </p>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl">
+                        <h3 class="text-xl font-medium text-apple-900 mb-4">Web应用程序清单</h3>
+                        <ul class="space-y-4 text-apple-700">
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-3">•</span>
+                                <span>PWA必须有Web应用程序清单，且清单必须包含足够信息使浏览器能够安装PWA</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-3">•</span>
+                                <span>清单可以定义PWA外观的许多方面（如主题颜色、背景颜色）及其行为（如作为共享目标、处理特定文件类型的能力）</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-xl">
+                        <h3 class="text-xl font-medium text-apple-900 mb-4">Service Worker</h3>
+                        <ul class="space-y-4 text-apple-700">
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-3">•</span>
+                                <span>PWA通常使用Service Worker提供至少最小程度的离线体验</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-3">•</span>
+                                <span>Service Worker鼓励一种架构：应用页面实现用户界面，Service Worker实现后端支持离线和后台操作</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="text-blue-500 mr-3">•</span>
+                                <span>Service Worker可以在需要时（如处理推送通知）由浏览器在后台启动</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <audio id="audio-tech-features" class="hidden">
+                    <source src="t2a_PWA的技术特性_20250506_182837.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- PWA与单页应用 -->
+        <section id="spa" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">PWA与单页应用</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_PWA与单页应用_20250506_182846.mp3" data-target="#progressive">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    传统网站由相互链接的页面集合构建，而单页应用（SPA）由一个HTML页面组成，通过JavaScript从服务器获取新内容并更新页面的相关部分。
+                </p>
+                <ul class="space-y-4 text-apple-700">
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>单页应用可提供更接近平台特定应用的用户体验，所以PWA通常实现为单页应用</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>单页应用使实现无缝用户界面更容易，用户被呈现单一、一致的页面</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>PWA不必是单页应用，单页应用也不必是PWA</span>
+                    </li>
+                </ul>
+                <audio id="audio-spa" class="hidden">
+                    <source src="t2a_PWA与单页应用_20250506_182846.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- 渐进增强 -->
+        <section id="progressive" class="mb-16 fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">渐进增强</h2>
+                    <button class="audio-play-btn bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 shadow-md" data-audio="t2a_渐进增强_20250506_182856.mp3" data-target="#audio">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    对PWA尤为重要，因为它们期望在广泛设备上运行，并经常使用可能不被所有浏览器支持的高级Web API。
+                </p>
+                <ul class="space-y-4 text-apple-700 mb-6">
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>基本组成：用户通过浏览器访问PWA时可像普通网站一样交互；如果浏览器支持安装，用户将被提示安装</span>
+                    </li>
+                    <li class="flex items-start">
+                        <span class="text-blue-500 mr-3">•</span>
+                        <span>PWA应对高级API执行特性检测并提供可接受的回退体验</span>
+                    </li>
+                </ul>
+                <div class="bg-gray-50 p-6 rounded-xl border border-gray-100">
+                    <p class="text-apple-700">
+                        <span class="text-apple-900 font-medium">示例：</span> 后台同步API使PWA可以在设备连接时发出网络请求。在不支持后台同步的设备上，应用应让用户知道无法完成操作，并给予重试机会。
+                    </p>
+                </div>
+                <audio id="audio-progressive" class="hidden">
+                    <source src="t2a_渐进增强对PWA_20250506_182856.mp3" type="audio/mp3">
+                </audio>
+            </div>
+        </section>
+
+        <!-- 音频总结 -->
+        <section id="audio" class="fade-in">
+            <div class="content-card bg-white rounded-2xl p-8 md:p-10">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl md:text-3xl font-semibold text-apple-900">音频总结</h2>
+                </div>
+                <p class="text-lg text-apple-700 leading-relaxed mb-6">
+                    您可以通过下方的音频播放器聆听本文所有内容的语音总结：
+                </p>
+                <div class="bg-gray-50 p-6 rounded-xl border border-gray-100 flex justify-center">
+                    <audio controls class="w-full max-w-md">
+                        <source src="t2a_渐进式Web应用_20250506_175106.mp3" type="audio/mp3">
+                        您的浏览器不支持音频元素。
+                    </audio>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚区域 -->
+    <footer class="bg-gray-100 py-10 px-6 mt-20">
+        <div class="max-w-4xl mx-auto text-center text-apple-600">
+            <p>渐进式Web应用（PWA）总结 | 基于MDN文档</p>
+            <p class="mt-2 text-sm">使用HTML + TailwindCSS构建，采用苹果设计风格</p>
+        </div>
+    </footer>
+
+    <!-- 交互脚本 -->
+    <script>
+        // 页面加载时触发动画
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始元素淡入
+            setTimeout(() => {
+                document.querySelectorAll('.fade-in').forEach(el => {
+                    el.classList.add('appear');
+                });
+            }, 100);
+            
+            // 滚动检测
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('appear');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            document.querySelectorAll('.fade-in:not(.appear)').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // 滚动进度条
+            window.onscroll = function() {
+                const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+                const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                const scrolled = (winScroll / height) * 100;
+                document.getElementById("progressBar").style.width = scrolled + "%";
+            };
+
+            // 音频播放功能
+            const audioButtons = document.querySelectorAll('.audio-play-btn');
+            let currentlyPlaying = null;
+
+            // 为每个音频按钮添加点击事件
+            audioButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const audioId = this.getAttribute('data-audio');
+                    const targetId = this.getAttribute('data-target');
+                    
+                    // 获取按钮所在部分的音频元素
+                    const section = this.closest('section');
+                    const audioElement = section.querySelector('audio');
+                    
+                    // 如果有正在播放的音频，停止它
+                    if (currentlyPlaying) {
+                        currentlyPlaying.pause();
+                        currentlyPlaying.currentTime = 0;
+                        // 重置按钮图标
+                        document.querySelectorAll('.audio-play-btn').forEach(btn => {
+                            btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>';
+                        });
+                    }
+
+                    // 如果点击的是当前正在播放的音频，则停止播放
+                    if (currentlyPlaying === audioElement) {
+                        currentlyPlaying = null;
+                        return;
+                    }
+
+                    // 播放选中的音频
+                    if (audioElement) {
+                        audioElement.play();
+                        currentlyPlaying = audioElement;
+                        // 更改按钮图标为暂停
+                        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 011-1h4a1 1 0 110 2H8a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>';
+                        
+                        // 当音频播放完成时
+                        audioElement.onended = function() {
+                            // 重置按钮图标
+                            button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>';
+                            currentlyPlaying = null;
+                            
+                            // 滚动到下一个部分
+                            if (targetId) {
+                                const targetElement = document.querySelector(targetId);
+                                if (targetElement) {
+                                    setTimeout(() => {
+                                        window.scrollTo({
+                                            top: targetElement.offsetTop - 100,
+                                            behavior: 'smooth'
+                                        });
+                                        
+                                        // 高亮目标部分
+                                        targetElement.classList.add('highlight-section');
+                                        setTimeout(() => {
+                                            targetElement.classList.remove('highlight-section');
+                                        }, 2000);
+                                    }, 500);
+                                }
+                            }
+                        };
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
